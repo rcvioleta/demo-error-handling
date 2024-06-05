@@ -31,47 +31,49 @@ class XeroValidationException extends \Exception
                 $error = $this->assocError;
             }
 
-            // Log::error('XERO_VALIDATION_EXCEPTION', [
-            //     'message' => $this->exception->getMessage(),
-            //     'error' => print_r($error, true)
-            // ]);
-
-            ErrorLog::create([
-                'error_id' => 'XERO_VALIDATION_EXCEPTION',
+            Log::error('XERO_VALIDATION_EXCEPTION', [
                 'message' => $this->exception->getMessage(),
-                'errors' => $errorData
+                'error' => print_r($error, true)
             ]);
-        } else {
-            // Log::error('XERO_VALIDATION_EXCEPTION', [
-            //     'message' => $this->exception->getMessage()
-            // ]);
 
-            ErrorLog::create([
-                'error_id' => 'XERO_API_ERROR',
+            // ErrorLog::create([
+            //     'error_id' => 'XERO_VALIDATION_EXCEPTION',
+            //     'message' => $this->exception->getMessage(),
+            //     'errors' => $errorData
+            // ]);
+        } else {
+            Log::error('XERO_VALIDATION_EXCEPTION', [
                 'message' => $this->exception->getMessage()
             ]);
+
+            // ErrorLog::create([
+            //     'error_id' => 'XERO_API_ERROR',
+            //     'message' => $this->exception->getMessage()
+            // ]);
         }
     }
 
     public function render(Request $request)
     {
+        $message = $this->exception->getMessage();
         $statusCode = $this->exception->getCode();
+        $errors = [];
 
-        if ($this->exception instanceof ClientException) {
-            $message = ucwords(str_replace('_', ' ', Str::snake($this->assocError['Detail'])));
-            $errors = $this->assocError['Errors'] ?? [];
-
-            if ($this->isJsonRequest($request)) {
-                return response()->json([
-                    'message' => $message,
-                    'errors' => $errors
-                ], $statusCode);
+        if ($this->isJsonRequest($request)) {
+            if ($this->exception instanceof ClientException) {
+                $message = ucwords(str_replace('_', ' ', Str::snake($this->assocError['Detail'])));
+                $errors = $this->assocError['Errors'] ?? [];
             }
+
+            return response()->json([
+                'message' => $message,
+                'errors' => $errors
+            ], $statusCode);
         }
 
         return view('errors.web', [
-            'title' => $this->exception->getMessage(),
-            'message' => '',
+            'title' => 'Something went wrong',
+            'message' => $message,
             'code' => $statusCode
         ]);
     }
